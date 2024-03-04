@@ -1,5 +1,6 @@
-import 'package:api_test/bloc/user_bloc.dart';
+import 'package:api_test/bloc/user/user_bloc.dart';
 import 'package:api_test/repository/repositories.dart';
+import 'package:api_test/utils/print_log.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -36,7 +37,7 @@ class Home extends StatelessWidget {
         ),
         body: BlocBuilder<UserBloc, UserState>(
           builder: (context, state) {
-            print('đây là state: $state');
+            ConsolePrint.log('$state');
             return state.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               loaded: (users) => ListView.builder(
@@ -46,16 +47,16 @@ class Home extends StatelessWidget {
                     return Card(
                       color: Colors.deepPurpleAccent,
                       elevation: 4,
-                      margin: EdgeInsets.symmetric(vertical: 10),
+                      margin: const EdgeInsets.symmetric(vertical: 10),
                       child: ListTile(
                         title: Text(
                           users[index].first_name,
-                          style: TextStyle(
+                          style: const TextStyle(
                               color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
                           users[index].last_name,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                           ),
                         ),
