@@ -1,9 +1,10 @@
 import 'package:api_test/bloc/counter/counter_bloc.dart';
+import 'package:api_test/bloc/doctor/doctor_bloc.dart';
 import 'package:api_test/bloc/user/user_bloc.dart';
-import 'package:api_test/repository/repositories.dart';
 import 'package:api_test/utils/print_log.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'repository/repository.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,8 +16,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: RepositoryProvider(
-        create: (context) => UserRepository(),
+      home: MultiRepositoryProvider(
+        providers: [
+          RepositoryProvider(
+            create: (context) => UserRepository(),
+          ),
+          RepositoryProvider(
+            create: (context) => BacSiRepository(),
+          ),
+        ],
         child: MultiBlocProvider(
           providers: [
             BlocProvider(
@@ -27,6 +35,11 @@ class MyApp extends StatelessWidget {
               create: (context) =>
                   UserBloc(RepositoryProvider.of<UserRepository>(context))
                     ..add(const UserEvent.loadUser()),
+            ),
+            BlocProvider(
+              create: (context) =>
+                  DoctorBloc(RepositoryProvider.of<BacSiRepository>(context))
+                    ..add(const DoctorEvent.fetchDoctor()),
             ),
           ],
           child: const Home(),
@@ -43,16 +56,9 @@ class Home extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Test Using Bloc and Frezzed'),
+        title: const Text('Test Using Bloc and Freezed'),
       ),
-      body: const Column(
-        children: [
-          _CounterText(),
-          Expanded(
-            child: _ListUser(),
-          ),
-        ],
-      ),
+      body: const _ListDoctor(),
       bottomNavigationBar: BottomAppBar(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -76,7 +82,6 @@ class Home extends StatelessWidget {
                       .read<CounterBloc>()
                       .add(const CounterEvent.decrement());
                 } else {
-                  // Hiển thị alert thông báo không thể giảm bé hơn 0
                   showDialog(
                     context: context,
                     builder: (BuildContext context) {
@@ -105,6 +110,158 @@ class Home extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ListDoctor extends StatelessWidget {
+  const _ListDoctor();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<DoctorBloc>().state;
+
+    return state.when(
+      loaded: (doctors) => ListView.builder(
+        itemCount: doctors.length,
+        itemBuilder: (context, index) {
+          return Card(
+            child: ListTile(
+              title: Text(doctors[index].TenBacSi),
+            ),
+          );
+        },
+      ),
+      loading: () => const Center(
+        child: CircularProgressIndicator(),
+      ),
+      loadError: (String messenge) => Center(
+        child: Text(messenge),
+      ),
+    );
+  }
+}
+
+class _ListUser extends StatelessWidget {
+  const _ListUser();
+
+  @override
+  Widget build(BuildContext context) {
+    final userState = context.watch<UserBloc>().state;
+
+    return userState.when(
+      loading: () => const Center(
+        child: CircularProgressIndicator(),
+      ),
+      loaded: (users) => ListView.builder(
+        physics: const BouncingScrollPhysics(),
+        shrinkWrap: true,
+        itemCount: users.length,
+        itemBuilder: (context, index) {
+          return Card(
+            color: Colors.deepPurpleAccent,
+            elevation: 4,
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            child: ListTile(
+              title: Text(
+                users[index].first_name,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                users[index].last_name,
+                style: const TextStyle(
+                  color: Colors.white,
+                ),
+              ),
+              trailing: CircleAvatar(
+                backgroundImage: NetworkImage(users[index].avatar),
+              ),
+            ),
+          );
+        },
+      ),
+      loadError: (String messenge) => Center(
+        child: Text(messenge),
+      ),
+    );
+  }
+}
+
+class _HomeBody extends StatelessWidget {
+  const _HomeBody();
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        await Future.delayed(const Duration(seconds: 1));
+        context.read<UserBloc>().add(const UserEvent.loadUser());
+      },
+      child: CustomScrollView(
+        slivers: <Widget>[
+          const SliverToBoxAdapter(
+            child: _CounterText(),
+          ),
+          BlocBuilder<UserBloc, UserState>(
+            builder: (context, userState) {
+              final counterState = context.watch<CounterBloc>().state;
+
+              return userState.when(
+                loading: () => const SliverFillRemaining(
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+                loaded: (users) {
+                  final itemCount = counterState.maybeWhen(
+                    loaded: (counter) =>
+                        counter < users.length ? counter : users.length,
+                    orElse: () => 0,
+                  );
+
+                  return SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (BuildContext context, int index) {
+                        return Card(
+                          color: Colors.deepPurpleAccent,
+                          elevation: 4,
+                          margin: const EdgeInsets.symmetric(vertical: 10),
+                          child: ListTile(
+                            title: Text(
+                              users[index].first_name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              users[index].last_name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                              ),
+                            ),
+                            trailing: CircleAvatar(
+                              backgroundImage:
+                                  NetworkImage(users[index].avatar),
+                            ),
+                          ),
+                        );
+                      },
+                      childCount: itemCount >= 0
+                          ? itemCount
+                          : 0, // Đảm bảo itemCount không nhỏ hơn 0
+                    ),
+                  );
+                },
+                loadError: (messenge) => SliverFillRemaining(
+                  child: Center(child: Text(messenge)),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -140,56 +297,82 @@ class _CounterText extends StatelessWidget {
   }
 }
 
-class _ListUser extends StatelessWidget {
-  const _ListUser();
+// class _HomeBody2 extends StatelessWidget {
+//   const _HomeBody2();
 
-  @override
-  Widget build(BuildContext context) {
-    final counterState = context.watch<CounterBloc>().state;
-    final userState = context.watch<UserBloc>().state;
+//   @override
+//   Widget build(BuildContext context) {
+//     return RefreshIndicator(
+//       onRefresh: () async {
+//         await Future.delayed(const Duration(seconds: 1));
+//         context.read<DoctorBloc>().add(const DoctorEvent.fetchDoctor());
+//       },
+//       child: CustomScrollView(
+//         slivers: <Widget>[
+//           const SliverToBoxAdapter(
+//             child: _CounterText(),
+//           ),
+//           BlocBuilder<DoctorBloc, DoctorState>(
+//             builder: (context, doctorState) {
+//               final counterState = context.watch<CounterBloc>().state;
 
-    return userState.when(
-        loading: () => const Center(
-              child: CircularProgressIndicator(),
-            ),
-        loaded: (users) {
-          final itemCount = counterState.maybeWhen(
-            loaded: (counter) =>
-                counter < users.length ? counter : users.length,
-            orElse: () => 0,
-          );
+//               return doctorState.when(
+//                 loading: () => const SliverFillRemaining(
+//                   child: Center(
+//                     child: CircularProgressIndicator(),
+//                   ),
+//                 ),
+//                 loaded: (doctors) {
+//                   final itemCount = counterState.maybeWhen(
+//                     loaded: (counter) =>
+//                         counter < doctors.length ? counter : doctors.length,
+//                     orElse: () => 0,
+//                   );
 
-          return ListView.builder(
-            physics: const BouncingScrollPhysics(),
-            shrinkWrap: true,
-            itemCount: itemCount >= 0
-                ? itemCount
-                : 0, // Đảm bảo itemCount không nhỏ hơn 0
-            itemBuilder: (context, index) {
-              return Card(
-                color: Colors.deepPurpleAccent,
-                elevation: 4,
-                margin: const EdgeInsets.symmetric(vertical: 10),
-                child: ListTile(
-                  title: Text(
-                    users[index].first_name,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    users[index].last_name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                    ),
-                  ),
-                  trailing: CircleAvatar(
-                    backgroundImage: NetworkImage(users[index].avatar),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-        loadError: (messenge) => Center(child: Text(messenge)));
-  }
-}
+//                   return SliverList(
+//                     delegate: SliverChildBuilderDelegate(
+//                       (BuildContext context, int index) {
+//                         return Card(
+//                           color: Colors.deepPurpleAccent,
+//                           elevation: 4,
+//                           margin: const EdgeInsets.symmetric(vertical: 10),
+//                           child: ListTile(
+//                             title: Text(
+//                               doctors[index]
+//                                   .Status, // Thay đổi từ first_name thành tenBacSi
+//                               style: const TextStyle(
+//                                 color: Colors.white,
+//                                 fontWeight: FontWeight.bold,
+//                               ),
+//                             ),
+//                             subtitle: Text(
+//                               doctors[index]
+//                                   .Message, // Thay đổi từ last_name thành hinhAnh
+//                               style: const TextStyle(
+//                                 color: Colors.white,
+//                               ),
+//                             ),
+//                             // trailing: CircleAvatar(
+//                             //   backgroundImage:
+//                             //       NetworkImage(doctors[index].hi),
+//                             // ),
+//                           ),
+//                         );
+//                       },
+//                       childCount: itemCount >= 0
+//                           ? itemCount
+//                           : 0, // Đảm bảo itemCount không nhỏ hơn 0
+//                     ),
+//                   );
+//                 },
+//                 loadError: (messenge) => SliverFillRemaining(
+//                   child: Center(child: Text(messenge)),
+//                 ),
+//               );
+//             },
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }

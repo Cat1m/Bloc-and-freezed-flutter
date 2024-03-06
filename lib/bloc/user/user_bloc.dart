@@ -1,5 +1,5 @@
-import 'package:api_test/model/user_model.dart';
-import 'package:api_test/repository/repositories.dart';
+import 'package:api_test/model/User/user_model.dart';
+import 'package:api_test/repository/user_repositories.dart';
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
-import 'package:api_test/model/user_model.dart';
+import 'package:api_test/model/User/user_model.dart';
 
 class UserRepository {
   String endpoint = 'https://reqres.in/api/users?page=2';
@@ -21,7 +21,7 @@ class UserRepository {
         return result.map((e) => UserModel.fromJson(e)).toList();
       }
     } on SocketException {
-      await Future.delayed(const Duration(milliseconds: 1800));
+      await Future.delayed(const Duration(milliseconds: 500));
       throw Exception('No Internet Connection');
     } on TimeoutException {
       throw Exception('');
