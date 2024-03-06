@@ -2,11 +2,8 @@ import 'package:api_test/bloc/counter/counter_bloc.dart';
 import 'package:api_test/bloc/user/user_bloc.dart';
 import 'package:api_test/repository/repositories.dart';
 import 'package:api_test/utils/print_log.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gap/gap.dart';
 
 void main() {
   runApp(const MyApp());
